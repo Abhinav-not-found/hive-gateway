@@ -14,6 +14,9 @@ import slowDown from "express-slow-down";
 dotenv.config();
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL_PROD || process.env.USER_SERVICE_URL
+
+const POST_SERVICE_URL = process.env.POST_SERVICE_URL_PROD || process.env.POST_SERVICE_URL
+
 const ORIGIN_URL = process.env.ORIGIN_URL_PROD || process.env.ORIGIN_URL
 
 const app = express()
@@ -59,7 +62,17 @@ app.use('/auth', proxy(USER_SERVICE_URL, {
   }
 }));
 
-
+app.use('/post', proxy(POST_SERVICE_URL, {
+  proxyReqPathResolver: req => `/api/post${req.url}`,
+  proxyErrorHandler: (err, res, next) => {
+    res.status(500).send('Proxy error');
+  },
+  userResHeaderDecorator: (headers, userReq, userRes) => {
+    headers['Access-Control-Allow-Origin'] = ORIGIN_URL;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+    return headers;
+  }
+}));
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
