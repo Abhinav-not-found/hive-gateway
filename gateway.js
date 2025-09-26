@@ -49,6 +49,14 @@ app.get('/', (req, res) => {
   res.send('Gateway is running.');
 })
 
+const skipJsonRoutes = ['/auth/upload', '/post/upload'];
+
+app.use((req, res, next) => {
+  if (skipJsonRoutes.some(route => req.originalUrl.startsWith(route))) {
+    return next();
+  }
+  express.json()(req, res, next);
+});
 
 app.use('/auth', proxy(USER_SERVICE_URL, {
   proxyReqPathResolver: req => `/api/auth${req.url}`,
