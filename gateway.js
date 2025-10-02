@@ -18,7 +18,11 @@ const USER_SERVICE_URL = process.env.USER_SERVICE_URL_PROD || process.env.USER_S
 
 const POST_SERVICE_URL = process.env.POST_SERVICE_URL_PROD || process.env.POST_SERVICE_URL
 
-const ORIGIN_URL = process.env.ORIGIN_URL_PROD || process.env.ORIGIN_URL
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://hive-client-flame.vercel.app',
+  'https://hive-client-r81283mnb-abhinavnotfounds-projects.vercel.app'
+];
 
 const app = express()
 app.use(express.json())
@@ -41,8 +45,15 @@ app.use(speedLimiter);
 app.use(compression());
 
 
+
 app.use(cors({
-  origin: ORIGIN_URL,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -50,7 +61,7 @@ app.get('/', (req, res) => {
   res.send('Gateway is running.');
 })
 
-const skipJsonRoutes = ['/auth/upload',''];
+const skipJsonRoutes = ['/auth/upload', ''];
 
 app.use((req, res, next) => {
   if (skipJsonRoutes.some(route => req.originalUrl.startsWith(route))) {
@@ -65,7 +76,10 @@ app.use('/auth', proxy(USER_SERVICE_URL, {
     res.status(500).send('Proxy error');
   },
   userResHeaderDecorator: (headers, userReq, userRes) => {
-    headers['Access-Control-Allow-Origin'] = ORIGIN_URL;
+    const origin = userReq.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      headers['Access-Control-Allow-Origin'] = origin;
+    }
     headers['Access-Control-Allow-Credentials'] = 'true';
     return headers;
   }
@@ -77,22 +91,14 @@ app.use('/post', proxy(POST_SERVICE_URL, {
     res.status(500).send('Proxy error');
   },
   userResHeaderDecorator: (headers, userReq, userRes) => {
-    headers['Access-Control-Allow-Origin'] = ORIGIN_URL;
+    const origin = userReq.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      headers['Access-Control-Allow-Origin'] = origin;
+    }
     headers['Access-Control-Allow-Credentials'] = 'true';
     return headers;
   }
 }));
-
-// app.use('/post', createProxyMiddleware({
-//   target: POST_SERVICE_URL,
-//   changeOrigin: true,
-//   onProxyReq: (proxyReq, req, res) => {
-//     // for multipart/form-data, nothing special is needed
-//   },
-//    onError(err, req, res) {
-//     res.status(500).send('Proxy error');
-//   }
-// }));
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
