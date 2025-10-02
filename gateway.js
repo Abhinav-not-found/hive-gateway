@@ -5,6 +5,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 import proxy from 'express-http-proxy';
 import path from "path";
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -49,7 +50,7 @@ app.get('/', (req, res) => {
   res.send('Gateway is running.');
 })
 
-const skipJsonRoutes = ['/auth/upload', '/post/upload'];
+const skipJsonRoutes = ['/auth/upload',''];
 
 app.use((req, res, next) => {
   if (skipJsonRoutes.some(route => req.originalUrl.startsWith(route))) {
@@ -81,6 +82,17 @@ app.use('/post', proxy(POST_SERVICE_URL, {
     return headers;
   }
 }));
+
+// app.use('/post', createProxyMiddleware({
+//   target: POST_SERVICE_URL,
+//   changeOrigin: true,
+//   onProxyReq: (proxyReq, req, res) => {
+//     // for multipart/form-data, nothing special is needed
+//   },
+//    onError(err, req, res) {
+//     res.status(500).send('Proxy error');
+//   }
+// }));
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
